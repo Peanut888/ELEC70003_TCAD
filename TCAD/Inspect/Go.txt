@@ -1,0 +1,10 @@
+set ProjectName "IdVd_go"
+set CurveName "IdVd(@node@)"
+proj_load IdVd_n3_SATURATION_des.plt $ProjectName
+cv_createDS $CurveName "$ProjectName drain OuterVoltage" \
+    "$ProjectName drain TotalCurrent" y
+cv_abs $CurveName y
+cv_createWithFormula go_curve(@node@) "diff(<$CurveName>)" A A
+set go [cv_compute "vecvaly(<go_curve(@node@)>, 1.5)" A A A A]
+puts "go at Vd=1.5V: [format %.3e $go] S/um"
+ft_scalar go [format %.3e $go]

@@ -1,0 +1,39 @@
+# Ion
+# Definition: Ids at Vg=Vdd and Vd=Vdd.  
+# Ioff 
+# Definition: Ids at Vg=0 and Vd=Vdd.  
+# Required input: IdVg curve, simulated with Vd=Vdd and Vg=0-Vdd.
+# Output: Ion, Ioff and the IdVg curve if the INSPECT GUI is running.
+# Note: The input file for this script is IdVg_sat_des.plt. Change
+# it into your own file before running the script.
+# (The ft_scalar call is needed for the parameter extraction under SWB)
+
+# Start of the script
+
+set ProjectName "IdVg_IonIoff"
+set CurveName "IdVg(@node@)"
+
+proj_load IdVg_n3_SATURATION_des.plt $ProjectName
+
+cv_createDS $CurveName "$ProjectName gate OuterVoltage" \
+                       "$ProjectName drain TotalCurrent" y
+cv_abs $CurveName y
+cv_setCurveAttr $CurveName "IdVg(@node@)"\
+red solid 2 none 3 defcolor 1 defcolor
+gr_setAxisAttr X  {Gate Voltage (V)}     12  {} {} black 1 10 0 5 0
+gr_setAxisAttr Y  {Drain Current (A/um)} 12  {} {} black 1 10 0 5 1
+
+# Get maximum drain current (assumed to be at Vg=Vdd)
+
+set Ion [cv_compute "vecmax(<$CurveName>)" A A A A ]
+puts "Ion: [format %.3e $Ion] A/um"
+ft_scalar Ion  [format %.3e $Ion]
+
+# Get drain current close to Vg=0
+
+set Ioff [cv_compute "vecvaly(<$CurveName>, 1e-4)" A A A A ]
+puts "Ioff: [format %.3e $Ioff] A/um"
+ft_scalar Ioff [format %.3e $Ioff]
+
+
+# End of the script

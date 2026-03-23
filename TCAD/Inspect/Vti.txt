@@ -1,0 +1,43 @@
+# Vti
+# Definition: Threshold voltage defined as the gate voltage
+# at which a constant drain current level is achieved. 
+# Required input: IdVg curve, simulated with Vd=Vdlin and Vg=0-Vdd.
+# Output: Vti and the IdVg curve if the INSPECT GUI is running.
+# Note: The input file for this script is IdVg_lin_des.plt. Change 
+# it into your own file before running the script. The constant
+# current level specified in the script is 0.1 uA, which can be 
+# modified in the statement of "set CurrentLevel 1e-7".
+
+# Start of the script
+
+set CurrentLevel 1e-7
+
+set ProjectName  "IdVg_Vti"
+set CurveName    "IdVg(@node@)"
+set LogCurveName "IdVg_Log(@node@)"
+
+proj_load IdVg_n2_LINEAR_des.plt $ProjectName
+
+cv_createDS $CurveName "$ProjectName gate OuterVoltage" \
+  "$ProjectName drain TotalCurrent" y
+cv_abs $CurveName y
+cv_setCurveAttr $CurveName "IdVg(@node@)"\
+  red solid 2 none 3 defcolor 1 defcolor
+gr_setAxisAttr X  {Gate Voltage (V)}     12 {} {} black 1 10 0 5 0
+gr_setAxisAttr Y  {Drain Current (A/um)} 12 {} {} black 1 10 0 5 1
+
+cv_log10Scale $CurveName $LogCurveName y
+set LogCurrentLevel [expr log10($CurrentLevel)]
+
+set Ivg0 [cv_compute "vecvaly(<$LogCurveName>, 1e-4)" A A A A ]
+
+if { $Ivg0 < $LogCurrentLevel } {
+ set Vti [cv_compute "vecvalx(<$LogCurveName>, \
+  $LogCurrentLevel)" A A A A ]
+ puts "Vti (Vg at Id=[format %.3e $CurrentLevel]): [format %.3f $Vti] V"
+ ft_scalar Vti [format %.3f $Vti]
+
+} else {
+ puts "Vti failed: leakage current [format %.3e $Ivg0] higher\
+ than the specified current level [format %.3e $CurrentLevel]!"
+}

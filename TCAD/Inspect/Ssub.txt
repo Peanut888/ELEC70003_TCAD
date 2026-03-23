@@ -1,0 +1,56 @@
+# Ssub
+# Definition: (d(log10(Ids))/d(Vg))-1.   
+# Required input: IdVg curve, simulated with Vd=Vdlin and Vg=0-Vdd.
+# Output: Ssub and the IdVg curve if the INSPECT GUI is running.
+# Note: The input file for this script is IdVg_lin_des.plt. Change
+# it into your own file before running the script. The Ssub in 
+# this script is calculated at a point where the current level
+# is 10 times smaller than the specified ON current, Ion, which
+# can be changed.
+# (The ft_scalar call is needed for the parameter extraction under SWB)
+
+# Start of the script
+set Ion 1e-7
+
+set ProjectName "IdVg_Ssub"
+set CurveName "IdVg(@node@)"
+set LogCurveName "IdVg_log(@node@)"
+
+proj_load IdVg_n2_LINEAR_des.plt $ProjectName
+
+
+cv_create $CurveName "$ProjectName gate OuterVoltage" \
+                       "$ProjectName drain TotalCurrent" y
+
+gr_setAxisAttr X  {Gate Voltage (V)}     12  {} {} black 1 10 0 5 0
+gr_setAxisAttr Y  {Log10(Drain Current) (A/um)} 12  -10.0 -4.0 black 1 10 0 5 0
+cv_abs $CurveName y
+cv_log10Scale $CurveName $LogCurveName y
+set LogIon [expr log10($Ion)]
+
+
+cv_display $LogCurveName y
+
+set Ivg0 [cv_compute "vecvaly(<$LogCurveName>, 1e-4)" A A A A ]
+
+if { $Ivg0 < [expr $LogIon-1.0] } {
+ set Vgsub [cv_compute "vecvalx(<$LogCurveName>, $LogIon-1.0)"\
+  A A A A ]
+ set SubSlope [cv_compute "vecvaly(diff(<$LogCurveName>), $Vgsub)"\
+  A A A A]
+  
+
+
+      
+cv_createWithFormula Tangent(@node@)\
+  "tangent((<$LogCurveName>), $Vgsub)" A A A A  
+cv_display Tangent(@node@) y  
+cv_setCurveAttr Tangent(@node@) "Tangent(@node@)" black dashed 2 none 3 defcolor 1 defcolor  
+  
+ set Ssub [expr 1e3/$SubSlope]
+ puts "Ssub (subthreshold voltage swing): [format %.3f $Ssub] mV/dec"
+ ft_scalar SSsub [format %.3f $Ssub]
+
+} else {
+puts "Ssub failed: No clear subthreshold regime found !" 
+}

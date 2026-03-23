@@ -1,0 +1,170 @@
+#	   	      Advanced Semiconductor Devices 2019-2020
+#		      ----------------------------------------
+#			Electrical & Electronic Engineeging
+#			-----------------------------------
+# 			      Imperial College London
+#			      -----------------------
+#			           GAA Al in SDE
+#                              ---------------------
+# Students: 			Justin Lam
+# Log In:			jdl224
+# CID:			06033181
+# Date:			23/03/2026
+#========================================================================================
+
+
+# Initialize
+#-----------
+	(set! process-up-direction "+z") 			;# Initialise
+
+	(sdegeo:set-auto-region-naming OFF) ;# Turn off the automatic naming of regions
+
+	(sdegeo:set-default-boolean "ABA")		;# Overlap behaviour: New Replaces Old
+
+# Create geometry
+# Vertical stack (z-direction):
+#   z = 0.000 - 0.001 : bottom oxide (insulation)
+#   z = 0.001 - 0.002 : metal gap
+#   z = 0.002 - 0.003 : gate oxide below sheet 1
+#   z = 0.003 - 0.005 : Si nanosheet 1 (2 nm)
+#   z = 0.005 - 0.006 : gate oxide above sheet 1
+#   z = 0.006 - 0.007 : metal between sheets
+#   z = 0.007 - 0.008 : gate oxide below sheet 2
+#   z = 0.008 - 0.010 : Si nanosheet 2 (2 nm)
+#   z = 0.010 - 0.011 : gate oxide above sheet 2
+#   z = 0.011 - 0.012 : top metal
+#----------------
+	
+	;# Substrate
+	(sdegeo:create-cuboid (position -0.03 -0.015 -0.05)  (position 0.03 0.015 0) "Silicon" "Substrate")
+
+	;# Si Nanosheet 1 (lower)
+	(sdegeo:create-cuboid (position -0.01 -0.003 0.003) (position 0.01 0.003 0.005) "Silicon" "Sheet1")
+
+	;# Si Nanosheet 2 (upper)
+	(sdegeo:create-cuboid (position -0.01 -0.003 0.008) (position 0.01 0.003 0.010) "Silicon" "Sheet2")
+
+	;# Source
+	(sdegeo:create-cuboid (position -0.02 -0.005 0) (position -0.01 0.005 0.012) "Silicon" "Source")
+
+	;# Drain
+	(sdegeo:create-cuboid (position 0.01 0.005 0) (position 0.02 -0.005 0.012) "Silicon" "Drain")
+
+	(sdegeo:set-default-boolean "BAB") ;# Charge overlap behaviour to old replaces new
+
+	;# Gate oxide wrapping sheet 1
+	(sdegeo:create-cuboid (position -0.008 -0.004 0.002) (position 0.008 0.004 0.006) "SiO2" "GateOx1")
+
+	;# Gate oxide wrapping sheet 2
+	(sdegeo:create-cuboid (position -0.008 -0.004 0.007) (position 0.008 0.004 0.011) "SiO2" "GateOx2")
+
+	(sdegeo:set-default-boolean "ABA")		;# Charge overlap behaviour to new replaces old
+	
+	;# Bottom oxide
+	(sdegeo:create-cuboid (position -0.008 -0.007 0) (position 0.008 0.007 0.001) "SiO2" "BottomOx")
+
+	(sdegeo:create-cuboid (position -0.01 0.003 -0.005)  (position 0.01 0.015 0) "SiO2" "BurriedOx1")   ;# Trench oxide left
+
+	(sdegeo:create-cuboid (position -0.01 -0.015 -0.005)  (position 0.01 -0.003 0) "SiO2" "BurriedOx2") ;# Trench oxide right
+
+	(sdegeo:set-default-boolean "BAB") ;# Charge overlap behaviour to old replaces new
+	
+	;# Metal gate
+	(sdegeo:create-cuboid (position -0.008 -0.007 0.0) (position 0.008 0.007 0.013) "Aluminum" "GateMetal")
+
+
+# Create contacts
+#----------------
+
+	(sdegeo:define-contact-set "gate" 4  (color:rgb 1 0 0 ) "##")								;# Gate contact
+	(sdegeo:define-contact-set "drain" 4  (color:rgb 0 0 1 ) "||")							;# Drain contact
+	(sdegeo:define-contact-set "source" 4  (color:rgb 0 1 0 ) "==")						;# Source contact
+	(sdegeo:define-contact-set "substrate" 4  (color:rgb 1 1 0 ) "//")			;# Substrate contact
+
+# Set contacts
+#-------------
+	
+	;# Substrate contact - bottom face
+	(sdegeo:set-current-contact-set "substrate")
+	(sdegeo:define-3d-contact (list (car (find-face-id (position 0 0 -0.05)))) "substrate")
+
+	;# Gate contact - top and side faces of metal gate
+	(sdegeo:set-current-contact-set "gate")
+	(sdegeo:define-3d-contact (list (car (find-face-id (position 0 0 0.013))) (car (find-face-id (position 0 -0.007 0.006))) (car (find-face-id (position 0 0.007 0.006))) (car (find-face-id (position -0.008 0 0.006))) (car (find-face-id (position 0.008 0 0.006))) (car (find-face-id (position -0.008 0 0.0015))) (car (find-face-id (position 0.008 0 0.0015))) (car (find-face-id (position 0 -0.007 0.004))) (car (find-face-id (position 0 0.007 0.004))) (car (find-face-id (position 0 -0.007 0.009))) (car (find-face-id (position 0 0.007 0.009)))) "gate")
+
+	
+	(sdegeo:set-current-contact-set "drain")								     ;# Drain contact
+	(sdegeo:define-3d-contact (list (car (find-face-id (position -0.02 0.0 0.006)))) "drain")
+
+	(sdegeo:set-current-contact-set "source")								     ;# Source contact
+	(sdegeo:define-3d-contact (list (car (find-face-id (position 0.02 0.0 0.006)))) "source")
+
+# Constant Doping
+#----------------
+	
+	;# Substrate - p-type
+	(sdedr:define-constant-profile "Constant.Substrate" "BoronActiveConcentration" 1e17)
+	(sdedr:define-constant-profile-region "PlaceCD.Substrate" "Constant.Substrate" "Substrate")
+
+	;# Nanosheet channels - p-type (light doping)
+	(sdedr:define-constant-profile "Constant.Sheet1" "BoronActiveConcentration" 5e+17)
+	(sdedr:define-constant-profile-region "PlaceCD.Sheet1" "Constant.Sheet1" "Sheet1")
+
+	(sdedr:define-constant-profile "Constant.Sheet2" "BoronActiveConcentration" 5e+17)
+	(sdedr:define-constant-profile-region "PlaceCD.Sheet2" "Constant.Sheet2" "Sheet2")
+	
+	(sdedr:define-constant-profile "Constant.Source" "ArsenicActiveConcentration" 1e+19)
+	(sdedr:define-constant-profile-region "PlaceCD.Source" "Constant.Source" "Source")
+
+	(sdedr:define-constant-profile "Constant.Drain" "ArsenicActiveConcentration" 1e+19)
+
+	(sdedr:define-constant-profile-region "PlaceCD.Drain" "Constant.Drain" "Drain")
+
+# Analytical Doping
+#------------------
+
+	(sdedr:define-refeval-window "BaseLine.FinLeft" "Rectangle" (position -0.01 -0.003 0) (position -0.01 0.003 0.012) )
+	(sdedr:define-analytical-profile-placement "PlaceAP.FinLeft" "Gauss.FinLeft" "BaseLine.FinLeft" "Positive" "NoReplace" "Eval")
+	(sdedr:define-gaussian-profile "Gauss.FinLeft" "ArsenicActiveConcentration" "PeakPos" 0  "PeakVal" 5e19 "ValueAtDepth" 1e17 "Depth" 0.003 "Gauss"  "Factor" 0.8)
+	
+	(sdedr:define-refeval-window "BaseLine.FinRight" "Rectangle" (position 0.01 -0.003 0) (position 0.01 0.003 0.012) )
+	(sdedr:define-analytical-profile-placement "PlaceAP.FinRight" "Gauss.FinRight" "BaseLine.FinRight" "Negative" "NoReplace" "Eval")
+	(sdedr:define-gaussian-profile "Gauss.FinRight" "ArsenicActiveConcentration" "PeakPos" 0  "PeakVal" 5e+19 "ValueAtDepth" 1e+17 "Depth" 0.003 "Gauss"  "Factor" 0.8)
+
+# Mesh Refinement
+#----------------
+
+	;# Global - coarse
+	(sdedr:define-refeval-window "Place.Global" "Cuboid" (position -0.03 -0.015 -0.05) (position 0.03 0.015 0.015))
+	(sdedr:define-refinement-size "RefDef.Global" 0.008 0.008 0.008 0.003 0.003 0.003)
+	(sdedr:define-refinement-placement "Place.Global" "RefDef.Global" (list "window" "Place.Global"))
+
+	;# Channel region - moderate
+	(sdedr:define-refeval-window "Place.Channel" "Cuboid" (position -0.012 -0.006 -0.001) (position 0.012 0.006 0.012))
+	(sdedr:define-refinement-size "RefDef.Channel" 0.002 0.002 0.002 0.001 0.001 0.001)
+	(sdedr:define-refinement-placement "Place.Channel" "RefDef.Channel" (list "window" "Place.Channel"))
+
+	;# Nanosheet regions - fine (critical for thin 2nm sheets)
+	(sdedr:define-refeval-window "Place.Sheet1" "Cuboid" (position -0.009 -0.005 0.0015) (position 0.009 0.005 0.0065))
+	(sdedr:define-refinement-size "RefDef.Sheet1" 0.001 0.001 0.0005 0.0005 0.0005 0.0002)
+	(sdedr:define-refinement-placement "Place.Sheet1" "RefDef.Sheet1" (list "window" "Place.Sheet1"))
+
+	(sdedr:define-refeval-window "Place.Sheet2" "Cuboid" (position -0.009 -0.005 0.0065) (position 0.009 0.005 0.0115))
+	(sdedr:define-refinement-size "RefDef.Sheet2" 0.001 0.001 0.0005 0.0005 0.0005 0.0002)
+	(sdedr:define-refinement-placement "Place.Sheet2" "RefDef.Sheet2" (list "window" "Place.Sheet2"))
+
+# Build Mesh
+#-----------
+
+	(sde:set-meshing-command "snmesh -a -c boxmethod")
+	(sdedr:append-cmd-file "")
+	(sde:build-mesh "snmesh" "-a -c boxmethod" "n@node@")
+
+# Open Visual
+#------------
+
+	(system:command "svisual n@node@_msh.tdr &")
+		
+# Save
+#-----
+	(sde:save-model "n@node@_msh.tdr")

@@ -1,0 +1,57 @@
+# Vtgm
+# Definition: Threshold voltage defined as the intersection of 
+# the tangent at the maximum conductance (gm) point with the 
+# gate voltage (Vg) axis. 
+# gm
+# Definition: The maximum of d(Id)/d(Vg) at a constant Vd.  
+# Required input: IdVg curve, simulated with Vd=Vdlin and Vg=0-Vdd.
+# Output: Vtgm, gm, V(gm) and the IdVg curve if the INSPECT GUI is running.
+# Note: The input file for this script is IdVg_lin_des.plt. Change 
+# it into your own file before running the script.
+# (The ft_scalar call is needed for the parameter extraction under SWB)
+
+# Start of the script
+
+set ProjectName "IdVg_Vtgm"
+set CurveName "IdVg(@node@)"
+
+proj_load IdVg_n2_LINEAR_des.plt $ProjectName
+
+cv_createDS $CurveName "$ProjectName gate OuterVoltage"\
+                       "$ProjectName drain TotalCurrent" y
+cv_abs $CurveName y
+cv_setCurveAttr $CurveName "IdVg(@node@)" red solid 2 none 3 defcolor 1 defcolor
+gr_setAxisAttr X  {Gate Voltage (V)}     12 {} {} black 1 10 0 5 0
+gr_setAxisAttr Y  {Drain Current (A/um)} 12 0.0 3.0E-5 black 1 10 0 5 0
+
+
+
+cv_createWithFormula TransCond(@node@) "diff(<$CurveName>)" A A
+cv_display TransCond(@node@) y2
+cv_setCurveAttr TransCond(@node@) "Transconductance(@node@)" blue solid 2 none \
+  3 defcolor 1 defcolor
+gr_setAxisAttr Y2  {Transconductance (S/um)} 12 {} {} black 1 10 0 5 0
+
+
+set Vgm  [cv_compute "veczero(diff(<$CurveName>)-vecmax(diff(<$CurveName>)))" \
+  A A A A ]    
+
+cv_createWithFormula Tangent(@node@) "tangent(<$CurveName>,$Vgm )" A A A A
+
+set Vtgm [cv_compute "vecvalx(<Tangent(@node@)>, 0)" A A A A ]
+
+set gm [cv_compute "vecmax(<TransCond(@node@)>)" A A A A ]
+
+cv_display Tangent(@node@) y
+cv_setCurveAttr Tangent(@node@) "Tangent(@node@)" black dashed 2 none 3 \
+  defcolor 1 defcolor
+
+
+puts "Vtgm=[format %.3f $Vtgm] V"
+ft_scalar Vtgm [format %.3f $Vtgm]
+
+puts "gm=[format %.3f $gm] S/um"
+ft_scalar gm [format %.3e $gm]
+
+puts "Vgm=[format %.3f $Vgm] V"
+ft_scalar Vgm [format %.3f $Vgm]

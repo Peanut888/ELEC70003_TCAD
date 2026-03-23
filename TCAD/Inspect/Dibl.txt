@@ -1,0 +1,36 @@
+# DIBL Extraction
+set ProjectName_lin  "IdVg_lin"
+set CurveName_lin    "IdVg_lin(@node@)"
+set ProjectName_sat  "IdVg_sat"
+set CurveName_sat    "IdVg_sat(@node@)"
+proj_load IdVg_n2_LINEAR_des.plt $ProjectName_lin
+proj_load IdVg_n3_SATURATION_des.plt $ProjectName_sat
+cv_createDS $CurveName_lin "$ProjectName_lin gate OuterVoltage" \
+  "$ProjectName_lin drain TotalCurrent" y
+cv_abs $CurveName_lin y
+cv_createDS $CurveName_sat "$ProjectName_sat gate OuterVoltage" \
+  "$ProjectName_sat drain TotalCurrent" y
+cv_abs $CurveName_sat y
+
+# Use Vtgm method for DIBL - more robust than constant current
+# Extract gm and Vtgm for linear
+cv_createWithFormula gm_lin(@node@) "diff(<$CurveName_lin>)" A A
+set Vgm_lin [cv_compute "veczero(diff(<$CurveName_lin>)-vecmax(diff(<$CurveName_lin>)))" A A A A]
+cv_createWithFormula Tan_lin(@node@) "tangent(<$CurveName_lin>,$Vgm_lin)" A A A A
+set Vtgm_lin [cv_compute "vecvalx(<Tan_lin(@node@)>, 0)" A A A A]
+
+# Extract gm and Vtgm for saturation
+cv_createWithFormula gm_sat(@node@) "diff(<$CurveName_sat>)" A A
+set Vgm_sat [cv_compute "veczero(diff(<$CurveName_sat>)-vecmax(diff(<$CurveName_sat>)))" A A A A]
+cv_createWithFormula Tan_sat(@node@) "tangent(<$CurveName_sat>,$Vgm_sat)" A A A A
+set Vtgm_sat [cv_compute "vecvalx(<Tan_sat(@node@)>, 0)" A A A A]
+
+# Calculate DIBL using Vd_sat=1.5V, Vd_lin=0.01V
+set DIBL [expr ($Vtgm_lin - $Vtgm_sat) / (1.5 - 0.01)]
+set DIBL_mV [expr $DIBL * 1000.0]
+puts "Vtgm_lin: [format %.3f $Vtgm_lin] V"
+puts "Vtgm_sat: [format %.3f $Vtgm_sat] V"
+puts "DIBL: [format %.1f $DIBL_mV] mV/V"
+ft_scalar DIBL [format %.1f $DIBL_mV]
+ft_scalar Vtgm_lin [format %.3f $Vtgm_lin]
+ft_scalar Vtgm_sat [format %.3f $Vtgm_sat]
